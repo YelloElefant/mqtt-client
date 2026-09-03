@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="stylesheet" href="styles.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tauri App</title>
+  <script type="module" src="/main.js" defer></script>
+</head>
+
+<body>
+  <main>
+    <header>
+      <form id="connectForm">
+        <input type="text" placeholder="mqtt host:port" />
+        <button id="connectBtn" type="submit">Connect</button>
+      </form>
+    </header>
+
+    <form id="subscribeForm">
+      <input type="text" placeholder="mqtt topic" />
+      <div id="retainContainer">
+        <label for="retainToggle">Retain</label>
+        <input type="checkbox" id="retainToggle" name="retain" />
+      </div>
+      <button id="subscribeBtn" type="submit">Subscribe</button>
+    </form>
+
+    <section id="subscribeList">
+
+    </section>
+
+    <section id="messageList">
+
+    </section>
+  </main>
+
+  <div id="debug">
+    <button id="isConnectedBtn">is connected</button>
+    <button id="getSubscribeListBtn">get subscribe list</button>
+  </div>
+
+</body>
+
+</html>
