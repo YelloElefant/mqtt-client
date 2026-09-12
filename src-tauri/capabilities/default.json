@@ -10,6 +10,8 @@
     "opener:default",
     "core:event:allow-listen",
     "core:event:allow-emit",
-    "liquid-glass:default"
+    "liquid-glass:default",
+    "dialog:default",
+    "store:default"
   ]
 }
