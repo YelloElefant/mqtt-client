@@ -1,0 +1,14 @@
+connection:
+    url: mqtt://100.105.254.124:1883
+
+subscriptions:
+ - lol/#
+
+
+
+publish: 
+    - topic: fe-can/cmd
+      payload: '{"id": 1, "action": "on"}'
+
+    - topic: fe-can/cmd
+      payload: '{"id": 1, "action": "off"}'

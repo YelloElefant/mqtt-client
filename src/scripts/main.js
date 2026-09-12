@@ -122,6 +122,12 @@ function visible() {
     m.topic.toLowerCase().includes(q) || m.payload.toLowerCase().includes(q));
 }
 
+
+function openMessage(id) {
+  const row = document.querySelector(`.msg[data-id="${id}"]`);
+  row.classList.toggle('open');
+}
+
 function renderStream() {
   if (!stream) return;
   const rows = visible();
@@ -129,9 +135,6 @@ function renderStream() {
     `${rows.length} message${rows.length === 1 ? '' : 's'} `;
 
   if (!rows.length) {
-    stream.innerHTML = connected
-      ? `<div class="stream-empty">Subscribed topics will appear here as messages arrive.</div>`
-      : '<div class="stream-empty">Connect to a broker to start watching traffic.</div>';
     return;
   }
 
@@ -143,7 +146,7 @@ function renderStream() {
       return o === null ? m.payload : JSON.stringify(o, null, 2);
     })();
     return `
-  <div class="msg ${open ? 'open' : ''} ${m.out ? 'out' : ''}" data - id="${m.id}" style = "color:${c}" >
+  <div class="msg ${open ? 'open' : ''} ${m.out ? 'out' : ''}" data-id="${m.id}" style = "color:${c}" >
         <span class="m-time">${stamp(m.ts)}</span>
         <span class="m-line">
           <span class="m-topic">${escapeHtml(m.topic)}</span>
@@ -167,6 +170,8 @@ async function deleteTopic(topic) {
   for (const sub of subTopic.subTopics) {
     deleteTopic(sub);
   }
+
+  MqttClients.get(currentClient).topics = MqttClients.get(currentClient).topics.filter(t => t.topic !== topic);
 
   try { await invoke('mqtt_unsubscribe', { handle: currentClient, topic: topic }); } catch (e) { console.error(e) }
 
@@ -250,7 +255,8 @@ function appendMessage(m) {
     const o = tryParse(m.payload);
     return o === null ? m.payload : JSON.stringify(o, null, 2);
   })();
-  div.innerHTML = `<div class="msg ${open ? 'open' : ''} ${m.out ? 'out' : ''}" data - id="${m.id}" style = "color:${c}" >
+  div.innerHTML = `<div class="msg ${open ? 'open' : ''} ${m.out ? 'out' : ''}" data-id="${m.id}" style = "color:${c}" >
+      <div class="msg-header">
         <span class="m-time">${stamp(m.ts)}</span>
         <span class="m-line">
           <span class="m-topic">${escapeHtml(m.topic)}</span>
@@ -261,7 +267,10 @@ function appendMessage(m) {
           <span class="flag q">Q${m.qos}</span>
         </span>
         ${open ? `<div class="m-body">${highlight(pretty)}</div>` : ''}
-      </div > `;
+      </div>
+
+      <div class="openMessage">${escapeHtml(peek(m.payload))}</div>
+    </div>`;
   stream.appendChild(div);
 }
 
@@ -303,8 +312,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     const row = e.target.closest('.msg');
     if (!row) return;
     const id = +row.dataset.id;
-    openRows.has(id) ? openRows.delete(id) : openRows.add(id);
-    renderStream();
+    console.log("Clicked row ID:", id);
+
+    openMessage(id);
   });
 
   filterEl.addEventListener('input', renderStream);
@@ -341,9 +351,19 @@ window.addEventListener('DOMContentLoaded', async () => {
       connected = false;
       setStatus('off', 'Offline');
       tabContainer.removeChild(div);
+
+      const topicList = document.getElementById('topicList');
+      topicList.innerHTML = '';
+
+      const stream = document.getElementById('stream');
+      stream.innerHTML = '';
+
       MqttClients.delete(handle);
       console.log("after remove", MqttClients);
       currentClient = null;
+
+
+
     });
 
     const statusIcon = document.createElement('div');
@@ -407,9 +427,11 @@ window.addEventListener('DOMContentLoaded', async () => {
   async function subscribe() {
     const el = document.getElementById('subInput');
     const t = el.value.trim();
-    try { await invoke('mqtt_subscribe', { handle: currentClient, topic: t }); } catch (err) { return setStatus('err', String(err)); }
+    try { await invoke('mqtt_subscribe', { handle: currentClient, topic: t }); } catch (err) { return; }
     el.value = '';
-    MqttClients.get(currentClient).topics.push({ topic: t, subTopics: [] });
+    if (MqttClients.get(currentClient).topics) {
+      MqttClients.get(currentClient).topics.push({ topic: t, subTopics: [] });
+    }
     addTopic(t);
   }
 
@@ -438,7 +460,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     const retain = document.getElementById('retain').checked;
     if (!topic) return;
     try {
-      await invoke('mqtt_publish', { topic, payload, qos, retain });
+      await invoke('mqtt_publish', { topic, payload, qos, retain, handle: currentClient });
       push({ ts: Date.now(), topic, payload, retain, qos, out: true });
     } catch (err) {
       setStatus('err', String(err));
